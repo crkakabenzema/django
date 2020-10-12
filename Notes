@@ -1,0 +1,2 @@
+1. Create a project:
+django-admin startproject projectname

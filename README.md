@@ -440,8 +440,104 @@ def some_view(request):
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='hello.pdf')
 ```
+16. ## Write reusable Apps:
 
+pip install setuptools
 
+Packaging your app:
+
+Create a parent directory for app, outside of Django project, call this directory django-appName.
+
+Move the appName directory into the django-appName directory.
+
+Create a file django-appName/README.rst with the contents such as:
+
+```
+=====
+Polls
+=====
+
+Polls is a Django app to conduct Web-based polls. For each question,
+visitors can choose between a fixed number of answers.
+
+Detailed documentation is in the "docs" directory.
+
+Quick start
+-----------
+
+1. Add "polls" to your INSTALLED_APPS setting like this::
+
+    INSTALLED_APPS = [
+        ...
+        'polls',
+    ]
+
+2. Include the polls URLconf in your project urls.py like this::
+
+    path('polls/', include('polls.urls')),
+
+3. Run ``python manage.py migrate`` to create the polls models.
+
+4. Start the development server and visit http://127.0.0.1:8000/admin/
+   to create a poll (you'll need the Admin app enabled).
+
+5. Visit http://127.0.0.1:8000/polls/ to participate in the poll.
+```
+
+Create a django-appName/LICENSE file.
+
+Create setup.cfg and setup.py files with the contents such as:
+
+```cfg
+[metadata]
+name = django-polls
+version = 0.1
+description = A Django app to conduct Web-based polls.
+long_description = file: README.rst
+url = https://www.example.com/
+author = Your Name
+author_email = yourname@example.com
+license = BSD-3-Clause  # Example license
+classifiers =
+    Environment :: Web Environment
+    Framework :: Django
+    Framework :: Django :: X.Y  # Replace "X.Y" as appropriate
+    Intended Audience :: Developers
+    License :: OSI Approved :: BSD License
+    Operating System :: OS Independent
+    Programming Language :: Python
+    Programming Language :: Python :: 3
+    Programming Language :: Python :: 3 :: Only
+    Programming Language :: Python :: 3.6
+    Programming Language :: Python :: 3.7
+    Programming Language :: Python :: 3.8
+    Topic :: Internet :: WWW/HTTP
+    Topic :: Internet :: WWW/HTTP :: Dynamic Content
+
+[options]
+include_package_data = true
+packages = find:
+```
+
+```python
+from setuptools import setup
+
+setup()
+```
+
+Create an empty directory `django-polls/docs` for future documentation.
+
+Create a django-appName/MAINFEST.in file:
+
+```in
+include LICENSE
+include README.rst
+recursive-include polls/static *
+recursive-include polls/templates *
+recursive-include docs *
+```
+
+ Build your package with `python setup.py sdist` (run from inside `django-polls`). 
 
 
 

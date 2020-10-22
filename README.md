@@ -540,7 +540,7 @@ recursive-include docs *
  Build your package with `python setup.py sdist` (run from inside `django-polls`). 
 
 
-17. Session:
+17. ## Session:
 Activate SessionMiddleware:
 
 By default, Django stores sessions in database (using the model `django.contrib.sessions.models.Session` ). 

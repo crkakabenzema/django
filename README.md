@@ -540,6 +540,65 @@ recursive-include docs *
  Build your package with `python setup.py sdist` (run from inside `django-polls`). 
 
 
+17. Session:
+Activate SessionMiddleware:
+
+By default, Django stores sessions in database (using the model `django.contrib.sessions.models.Session` ). 
+
+For the use of database-backed session, add `'django.contrib.sessions'` to [`INSTALLED_APPS`] setting. 
+
+Run `manage.py migrate` to install the single database table that stores session data.
+
+ Each [`HttpRequest`](https://docs.djangoproject.com/en/3.1/ref/request-response/#django.http.HttpRequest) object – the first argument to any Django view function – will have a `session` attribute, which is a dictionary-like object, when middleware activated.
+
+example:
+
+```python
+from django.shortcuts import render
+
+# Create your views here.
+from django.http import HttpResponse
+
+from .models import Account
+
+def registerSubmit(request):
+    userName = request.POST['username']
+    passWord = request.POST['password']
+    confirmPassword = request.POST['password_confirm']
+    try:
+        q = Account.objects.get(username = request.POST['username'])
+    except (KeyError, Account.DoesNotExist):
+        if passWord == confirmPassword:
+            # insert into table
+            q = Account(username= request.POST['username'], password=request.POST['password'])
+            q.save()
+            return HttpResponse("Register successfully.")
+        else:
+            # redisplay the register form
+            return render(request, 'login/register.html', {'error_message': "password and confirm_password are not the same."})
+    else:
+        return render(request, 'login/register.html', {'error_message': "username already exists."})
+
+def login(request):
+    m = Account.objects.get(username=request.POST['username'])
+    if m.password == request.POST['password']:
+       # Session data is stored in a database table named django_session . use command "django-admin clearsessions" to clean the database
+        request.session['member_id'] = m.id
+        return HttpResponse("You're logged in."+request.session["member_id"])
+    else:
+        return HttpResponse("Your username and password didn't match.")
+    
+def logout(request):
+    try:
+        del request.session['member_id']
+    except KeyError:
+        pass
+    return HttpResponse("You're logged out.")
+
+```
+
+Use command "django-admin clearsessions" to clean out expired sessions in database.
+
 
 
 

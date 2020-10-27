@@ -652,8 +652,6 @@ User, Permission and Group are the authentication model.
 
 If you **just want to define some methods**, use proxy:
 
-If you **just want to define some methods**, use proxy:
-
 ```python
 from django.contrib.auth.models import User
 class ProxyUser(User):
@@ -812,6 +810,7 @@ class RegistrationForm(forms.Form):
  
         return email
  
+    # form has the cleaned_data method
     def clean_password1(self):
         password1 = self.cleaned_data.get('password1')
         

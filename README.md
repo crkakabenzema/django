@@ -599,13 +599,641 @@ def logout(request):
 
 Use command "django-admin clearsessions" to clean out expired sessions in database.
 
+18. ## Authentication Views
 
+The easiest way is to include the provided URLconf in `django.contrib.auth.urls` in your own URLconf, for example:
 
+```
+urlpatterns = [
+    path('accounts/', include('django.contrib.auth.urls')),
+]
+```
 
+This will include the following URL patterns:
 
+```
+accounts/login/ [name='login']
+accounts/logout/ [name='logout']
+accounts/password_change/ [name='password_change']
+accounts/password_change/done/ [name='password_change_done']
+accounts/password_reset/ [name='password_reset']
+accounts/password_reset/done/ [name='password_reset_done']
+accounts/reset/<uidb64>/<token>/ [name='password_reset_confirm']
+accounts/reset/done/ [name='password_reset_complete']
+```
 
+If you want more control over your URLs, you can reference a specific view :
 
+```python
+from django.contrib.auth import views as auth_views
 
+urlpatterns = [
+    path('change-password/', auth_views.PasswordChangeView.as_view()),
+]
+```
+
+The views have optional arguments to alter the behavior of the view.
+
+```python
+# for example
+auth_views.PasswordChangeView.as_view(template_name='change-password.html'),
+```
+
+If you want to change Login_URL, login_redirect_url, logout_redirect_url, in settings.py
+
+```python
+# for example
+LOGIN_REDIRECT_URL = '/appname/'
+```
+
+19. ## **User Model for authentication**：
+
+User, Permission and Group are the authentication model.
+
+If you **just want to define some methods**, use proxy:
+
+If you **just want to define some methods**, use proxy:
+
+```python
+from django.contrib.auth.models import User
+class ProxyUser(User):
+    class Meta:
+        proxy = True # define proxy model
+    def get_data(self):
+        return self.objects.filter('filter condition')
+```
+
+If you **want to extend User model**:
+
+In appname/models.py: create a User model
+
+```python
+from django.contrib.auth.models import User
+from django.db import models
+
+class UserProfile(models.Model):
+    
+    # UserProfile and User are OneToOne
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    
+    org = models.CharField('Organization', max_length=128, blank=True)
+    
+    tele = models.CharField('Telephone', max_lenght=50, blank=True)
+    
+    mod_date = models.DateTimeField('Last modified', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'User Profile'
+        
+    def __str__(self):
+        return self.user.__str__()
+```
+
+**If you want to override User model and rewrite it**,  in models.py:
+
+```python
+from django.contrib.auth.models import BaseUserManager, AbstractUser
+from shortuuidfield import ShortUUIDField
+
+class UserManager(BaseUserManager): #自定义Manager管理器
+    def _create_user(self,username,password,email,**kwargs):
+        if not username:
+            raise ValueError("请传入用户名！")
+        if not password:
+            raise ValueError("请传入密码！")
+        if not email:
+            raise ValueError("请传入邮箱地址！")
+        user = self.model(username=username,email=email,**kwargs)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def create_user(self,username,password,email,**kwargs): # 创建普通用户
+        kwargs['is_superuser'] = False
+        return self._create_user(username,password,email,**kwargs)
+
+    def create_superuser(self,username,password,email,**kwargs): # 创建超级用户
+        kwargs['is_superuser'] = True
+        kwargs['is_staff'] = True
+        return self._create_user(username,password,email,**kwargs)
+
+class User(AbstractUser): # 自定义User
+    GENDER_TYPE = (
+        ("1","男"),
+        ("2","女")
+    )
+    uid = ShortUUIDField(primary_key=True)
+    username = models.CharField(max_length=15,verbose_name="用户名",unique=True)
+    nickname = models.CharField(max_length=13,verbose_name="昵称",null=True,blank=True)
+    age = models.IntegerField(verbose_name="年龄",null=True,blank=True)
+    gender = models.CharField(max_length=2,choices=GENDER_TYPE,verbose_name="性别",null=True,blank=True)
+    phone = models.CharField(max_length=11,null=True,blank=True,verbose_name="手机号码")
+    email = models.EmailField(verbose_name="邮箱")
+    picture = models.ImageField(upload_to="Store/user_picture",verbose_name="用户头像",null=True,blank=True)
+    home_address = models.CharField(max_length=100,null=True,blank=True,verbose_name="地址")
+    card_id = models.CharField(max_length=30,verbose_name="身份证",null=True,blank=True)
+    is_active = models.BooleanField(default=True,verbose_name="激活状态")
+    is_staff = models.BooleanField(default=True,verbose_name="是否是员工")
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    USERNAME_FIELD = 'username' # 使用authenticate验证时使用的验证字段，可以换成其他字段，但验证字段必须是唯一的，即设置了unique=True
+    REQUIRED_FIELDS = ['email'] # 创建用户时必须填写的字段，除了该列表里的字段还包括password字段以及USERNAME_FIELD中的字段
+    EMAIL_FIELD = 'email' # 发送邮件时使用的字段
+
+    objects = UserManager()
+
+    def get_full_name(self):
+        return self.username
+
+    def get_short_name(self):
+        return self.username
+
+    class Meta:
+        verbose_name = "用户"
+        verbose_name_plural = verbose_name
+```
+
+In settings.py, 
+
+```python
+AUTH_USER_MODEL = "appname.User"
+```
+
+Run the following command, create UserProfile database:
+
+```
+python manage.py makemigrations` 
+python manage.py migrate
+```
+
+In appname/forms.py: create RegistrationForm and LoginForm:
+
+```python
+from django import forms
+from django.contrib.auth.models import User
+import re
+
+def email_check(email):
+    pattern = re.compile(r"\"?([-a-zA-Z0-9.`?{}]+@\w+\.\w+)\"?")
+    return re.match(pattern, email)
+
+class RegistrationForm(forms.Form):
+    
+    username = forms.CharField(label='Username', max_length=50)
+    email = forms.EmailField(label='Email')
+    passowrd1 = forms.CharField(label='Password', widget=forms.PasswordInput)
+    password2 = forms.CharField(label='Password Confirmation', widget=forms.PassowrdInput)
+    
+    # Use clean methods to define custom validation rules
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        
+        if len(username) < 6:
+            raise forms.ValidationError("Your username must be at least 6 characters long.")
+        elif len(username) > 50:
+            raise forms.ValidationError("Your username is too long.")
+        else:
+            filter_result = User.objects.filter(username__exact=username)
+            if len(filter_result) > 0:
+                raise forms.ValidationError("Your username already exists.")
+ 
+        return username
+     
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+ 
+        if email_check(email):
+            filter_result = User.objects.filter(email__exact=email)
+            if len(filter_result) > 0:
+                raise forms.ValidationError("Your email already exists.")
+        else:
+            raise forms.ValidationError("Please enter a valid email.")
+ 
+        return email
+ 
+    def clean_password1(self):
+        password1 = self.cleaned_data.get('password1')
+        
+        if len(password1) < 6:
+            raise forms.ValidationError("Your password is too short.")
+        elif len(password1) > 20:
+            raise forms.ValidationError("Your password is too long.")
+ 
+        return password1
+ 
+    def clean_password2(self):
+        password1 = self.cleaned_data.get('password1')
+        password2 = self.cleaned_data.get('password2')
+ 
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Password mismatch. Please enter again.")
+ 
+        return password2
+
+class LoginForm(forms.Form):
+    
+    username = forms.CharField(label='Username', max_length=50)
+    password = forms.CharField(label='Password', widget=forms.PasswordInput)
+    
+    # Use clean methods to define custom validation rules
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+ 
+        if email_check(username):
+            filter_result = User.objects.filter(email__exact=username)
+            if not filter_result:
+                raise forms.ValidationError("This email does not exist.")
+        else:
+            filter_result = User.objects.filter(username__exact=username)
+            if not filter_result:
+                        raise forms.ValidationError("This username does not exist. Please register first.")
+ 
+        return username
+```
+
+In appname/views.py:
+
+@login_required(login_url='/accounts/login/')
+
+```python
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.models import User
+from .models import UserProfile
+from django.contrib import auth
+from .forms import RegistrationForm, LoginForm, ProfileForm, PwdChangeForm
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+ 
+ 
+def register(request):
+    if request.method == 'POST':
+ 
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password2']
+ 
+            # 使用内置User自带create_user方法创建用户，不需要使用save()
+              user = User.objects.create_user(username=username, password=password, email=email)
+ 
+            # 如果直接使用objects.create()方法后不需要使用save()
+              user_profile = UserProfile(user=user)
+              user_profile.save()
+ 
+            return HttpResponseRedirect("/accounts/login/")
+# return JsonResponse({"code": 200,"message":"验证通过", "data":{"username": "","password1":"","password2":"", "email": ""}})
+# return JsonResponse({"code":400,"message":"验证失败","data":{"username":form.errors.get("username"),"password1":form.errors.get("password1"),"password2":form.errors.get("password2"),"email":form.errors.get("email")}})
+
+    else:
+        # 返回空表
+        form = RegistrationForm()
+ 
+    return render(request, 'users/registration.html', {'form': form})
+ 
+ 
+def login(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+           username = form.cleaned_data['username']
+           password = form.cleaned_data['password']
+ 
+           user = auth.authenticate(username=username, password=password)
+ 
+           if user is not None and user.is_active:
+           #使用自带的login函数进行登录，会自动添加session信息
+              auth.login(request, user)
+              request.session["username"] = username # 自定义session，login函数添加的session不满足时可以增加自定义的session信息。
+                if remember:
+                    request.session.set_expiry(None) # 设置session过期时间，None表示使用系统默认的过期时间 
+                else:
+                    request.session.set_expiry(0) # 0代表关闭浏览器session失效  
+              return HttpResponseRedirect(reverse('users:profile', args=[user.id]))
+           else:
+                # 登陆失败
+                return render(request, 'users/login.html', {'form': form,
+                               'message': 'Wrong password. Please try again.'})
+    else:
+        form = LoginForm()
+ 
+    return render(request, 'users/login.html', {'form': form})
+
+def logoutView(request):
+    logout(request) # 调用django自带退出功能，会帮助我们删除相关session
+    return redirect(request.META["HTTP_REFERER"]) 
+
+@login_required
+def my_view(request):
+    
+```
+
+In /templates/appname/ directory, create registration.html and login.html:
+
+(registration.html):
+
+```html
+{% block content %}
+<div class="form-wrapper">
+   <form method="post" action="" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for field in form %}
+           <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+        {% if field.help_text %}
+             <p class="help">{{ field.help_text|safe }}</p>
+        {% endif %}
+           </div>
+        {% endfor %}
+      <div class="button-wrapper submit">
+         <input type="submit" value="Submit" />
+      </div>
+   </form>
+</div>
+{% endblock %}
+```
+
+(login.html):
+
+```
+{% block content %}
+<h2>Login</h2>
+{% if message %}
+ {{ message }}
+{% endif %}
+<div class="form-wrapper">
+   <form method="post" action="" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% for field in form %}
+           <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+        {% if field.help_text %}
+             <p class="help">{{ field.help_text|safe }}</p>
+        {% endif %}
+           </div>
+        {% endfor %}
+      <div class="button-wrapper submit">
+         <input type="submit" value="Login" />
+      </div>
+   </form>
+    <a href="/accounts/register">Register</a>
+</div>
+{% endblock %}
+```
+
+20. ## **Permissions:**
+
+permission model has id, name, content_type_id, codename field.
+
+When `django.contrib.auth` is listed in your [`INSTALLED_APPS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-INSTALLED_APPS) setting, it will ensure that four default permissions – add, change, delete, and view – are created for each Django model defined in one of your installed applications.
+
+name presents the function of the permission,
+
+content_type_id presents the id of the model which has the permission to **add, change, delete, view** it,
+
+codename presents the name of the permission. **add_model, change_model, delete_model, view_model.**
+
+The method of adding permissions:
+
+In class Meta of model, add the permission; 
+
+```python
+from django.db import models
+#通过定义模型来添加权限：
+class Address(models.Model):
+    """
+    收货地址
+    """
+    recv_address = models.TextField(verbose_name = "收货地址")
+    receiver =  models.CharField(max_length=32,verbose_name="接收人")
+    recv_phone = models.CharField(max_length=32,verbose_name="收件人电话")
+    post_number = models.CharField(max_length=32,verbose_name="邮编")
+    buyer_id = models.ForeignKey(to=User,on_delete = models.CASCADE,verbose_name = "用户id")
+    class Meta:
+        permissions = [("view_addresses", "查看地址")]        
+# 通过代码添加权限
+from django.contrib.auth.models import Permission,ContentType
+from .models import Address
+#
+content_type = ContentType.objects.get_for_model(Address)
+permission = Permission.objects.create(name = "查看地址",codename = "view_addresses",content_type = content_type)
+permission1 = Permission.objects.crate(name = '改变地址',codename = 
+"change_addresses",content_type = content_type)
+```
+
+You can also use the following statements to add permissions in User model:
+
+```python
+user.user_permissions.set(permission_list) #直接给定一个权限的列表
+user.user_permissions.add(permission,permission,...) #一个个添加权限
+user.user_permission.remover(permission,permission) #一个个删除权限
+user.user_permission.clear() #清除权限
+user.has_perm('<app_name>.<codename>') #判断是否拥有某个权限
+user.get_all_permission() #获得所有权限
+user.get_group_permission #获得所在组权限
+```
+
+For authentication in views, you can use user.has_perm('<app_name>.<codename>') method to validate the permission.
+
+You can also use the @permission_required(*perm*ission, *login_url=None*, *raise_exception=False*) decorator.
+
+```python
+from django.contrib.auth.decorators import permission_required
+ 
+@permission_required('appname.codename')
+def my_view(request):
+    ...
+```
+
+To apply permission checks to [class-based views](https://docs.djangoproject.com/en/3.1/ref/class-based-views/), you can use the `PermissionRequiredMixin`:
+
+This mixin, just like the `permission_required` decorator, checks whether the user accessing a view has all given permissions.
+
+```python
+from django.contrib.auth.mixins import PermissionRequiredMixin
+
+class MyView(PermissionRequiredMixin, View):
+    permission_required = 'polls.add_choice'
+    # Or multiple of permissions:
+    permission_required = ('polls.view_choice', 'polls.change_choice')
+```
+
+In **templates**, to check if the logged-in user has any permissions in the foo app:
+
+```html
+{% if perms.foo %}
+```
+
+```html
+{% if perms.foo %}
+    <p>You have permission to do something in the foo app.</p>
+    {% if perms.foo.add_vote %}
+        <p>You can vote!</p>
+    {% endif %}
+    {% if perms.foo.add_driving %}
+        <p>You can drive!</p>
+    {% endif %}
+{% else %}
+    <p>You don't have permission to do anything in the foo app.</p>
+{% endif %}
+```
+
+Group can classify the User by permissions:
+
+```
+Group.objects.create(group_name) # 创建分组
+group.permission.add #添加权限
+group.permission.remove #移除权限
+group.permisiion.clear #清除权限
+user.get_group_permission() #获取用户所属组的权限
+```
+
+21. ## Group:
+
+see 19. **User Model for authentication**
+
+22. ## Manager:
+
+A Manager is the **interface through which database query operations are provided to Django models.**
+
+```python
+# First, define the Manager subclass.
+class DahlBookManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(author='Roald Dahl')
+
+# Then hook it into the Book model explicitly.
+class Book(models.Model):
+    title = models.CharField(max_length=100)
+    author = models.CharField(max_length=50)
+
+    objects = models.Manager() # The default manager.
+    dahl_objects = DahlBookManager() # The Dahl-specific manager.
+```
+
+The statement Book.objects.all() will return all books in the database.
+
+Because `get_queryset()` returns a `QuerySet` object, you can use `filter()`, `exclude()` and all the other `QuerySet` methods on it
+
+```
+Book.dahl_objects.all()
+Book.dahl_objects.filter(title='Matilda')
+Book.dahl_objects.count()
+```
+
+23. ## Templates
+
+Loading templates in this order:
+
+base_dir/projectName/templates/x.html
+
+base_dir/projectName/appName1/templates/x.html
+
+base_dit/projectName/appName2/templates/x.html
+
+{{ variable }}:  It evaluates that variable and replaces it with the result.
+
+".": it tries the following lookups, in this order: dictionary lookup, attribute or method lookup, numeric index lookup.
+
+{{ name|lower}}: This displays the value of the {{ name }} variable after being filtered through the lower filter, which converts text to lowercase. Use a pipe (|) to apply a filter. Filter can be chained.
+
+{{% tag %}}: 
+
+for:
+
+```html
+<ul>
+{% for athlete in athlete_list %}
+    <li>{{ athlete.name }}</li>
+{% endfor %}
+</ul>
+```
+
+if, elif and else:
+
+```html
+{% if athlete_list %}
+    Number of athletes: {{ athlete_list|length }}
+{% elif athlete_in_locker_room_list %}
+    Athletes should be out of the locker room soon!
+{% else %}
+    No athletes.
+{% endif %}
+```
+
+{% block %}: defines blocks that child templates can override.
+
+{% block block_name %} content {% endblock %}
+
+```html
+<!DOCTYPE html base.html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>{% block title %}My amazing site{% endblock %}</title>
+</head>
+
+<body>
+    <div id="sidebar">
+        {% block sidebar %}
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog/">Blog</a></li>
+        </ul>
+        {% endblock %}
+    </div>
+
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+```
+
+```html
+{% extends "base.html" %}
+
+{% block title %}My amazing blog{% endblock %}
+
+{% block content %}
+{% for entry in blog_entries %}
+    <h2>{{ entry.title }}</h2>
+    <p>{{ entry.body }}</p>
+{% endfor %}
+{% endblock %}
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>My amazing blog</title>
+</head>
+
+<body>
+    <div id="sidebar">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog/">Blog</a></li>
+        </ul>
+    </div>
+
+    <div id="content">
+        <h2>Entry one</h2>
+        <p>This is my first entry.</p>
+
+        <h2>Entry two</h2>
+        <p>This is my second entry.</p>
+    </div>
+</body>
+</html>
+```
 
 
 

@@ -866,11 +866,15 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
  
- 
 def register(request):
     if request.method == 'POST':
  
         form = RegistrationForm(request.POST)
+        #form instance from its fields attribute: f = ContactForm(request.POST); for row in f.fields.value()
+        #is_valid() method to validate data
+        #cleaned_data: normalizing it to a consistent format. cleaned_data dictionary contains only the valid fields defined in the Form, even if you pass extra data when you define the Form.
+        #for example: data = {'subject': 'hello','message':'Hi there','sender':'foo@example.com','cc_myself':True}; the keys are the fieldNames.
+        #f = Form(data)
         if form.is_valid():
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']

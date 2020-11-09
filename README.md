@@ -1,5 +1,3 @@
-# django
-django notes
 1. ## Create a project:
 
 `$ django-admin startporject projectName`
@@ -70,7 +68,7 @@ from django.urls import path
 
 from . import views
 
-app_name = appName
+app_name = 'appName'
 urlpatterns = [
     # ex: /appName/
     path('', views.index, name='index'),
@@ -123,7 +121,7 @@ class tableName1(models.Model):
     columnName1 = models.CharField(max_length=200)
     columnName2 = models.DateTimeField('date published')
     def __str__(self):
-        return self.text
+        return self.columnName
 
 class tableName2(models.Model):
     columnName3 = models.ForeignKey(tableName1, on_delete=models.CASCADE)
@@ -178,7 +176,8 @@ Database migrations
 `$ python manage.py shell`
 
 ```sqlite
-from polls.models import TableName
+from appname.models import TableName
+from django.contrib.auth.models import User
 
 # show all objects
 TableName.objects.all()
@@ -190,6 +189,9 @@ q.save()
 ## insert foreign key content
 q = TableName.objects.get(condition)
 q.tableName_set.create(columnName1= content, columnName2= content)
+
+## order
+q_list = TableName.objects.order_by('columnName')[:]
 
 # query
 TableName.objects.filter(condition)
@@ -221,7 +223,7 @@ In appName/templates/appName: create templates html files
 
 10. ## Write a form:
 
-request.POST is a dictionary-like object
+**request.POST is a dictionary-like object**
 
 reverse() function avoid having to hardcode a URL and return a string like: "/polls/3/results"
 
@@ -440,6 +442,7 @@ def some_view(request):
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='hello.pdf')
 ```
+
 16. ## Write reusable Apps:
 
 pip install setuptools
@@ -539,8 +542,8 @@ recursive-include docs *
 
  Build your package with `python setup.py sdist` (run from inside `django-polls`). 
 
-
 17. ## Session:
+
 Activate SessionMiddleware:
 
 By default, Django stores sessions in database (using the model `django.contrib.sessions.models.Session` ). 
@@ -637,6 +640,20 @@ The views have optional arguments to alter the behavior of the view.
 ```python
 # for example
 auth_views.PasswordChangeView.as_view(template_name='change-password.html'),
+```
+
+In projectname/templates:
+
+```html
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Administration</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
 ```
 
 If you want to change Login_URL, login_redirect_url, logout_redirect_url, in settings.py
@@ -779,7 +796,7 @@ class RegistrationForm(forms.Form):
     
     username = forms.CharField(label='Username', max_length=50)
     email = forms.EmailField(label='Email')
-    passowrd1 = forms.CharField(label='Password', widget=forms.PasswordInput)
+    password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Password Confirmation', widget=forms.PassowrdInput)
     
     # Use clean methods to define custom validation rules
@@ -810,7 +827,6 @@ class RegistrationForm(forms.Form):
  
         return email
  
-    # form has the cleaned_data method
     def clean_password1(self):
         password1 = self.cleaned_data.get('password1')
         
@@ -866,15 +882,11 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
  
+ 
 def register(request):
     if request.method == 'POST':
  
         form = RegistrationForm(request.POST)
-        #form instance from its fields attribute: f = ContactForm(request.POST); for row in f.fields.value()
-        #is_valid() method to validate data
-        #cleaned_data: normalizing it to a consistent format. cleaned_data dictionary contains only the valid fields defined in the Form, even if you pass extra data when you define the Form.
-        #for example: data = {'subject': 'hello','message':'Hi there','sender':'foo@example.com','cc_myself':True}; the keys are the fieldNames.
-        #f = Form(data)
         if form.is_valid():
             username = form.cleaned_data['username']
             email = form.cleaned_data['email']
@@ -929,7 +941,7 @@ def logoutView(request):
     logout(request) # 调用django自带退出功能，会帮助我们删除相关session
     return redirect(request.META["HTTP_REFERER"]) 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def my_view(request):
     
 ```
@@ -989,11 +1001,11 @@ In /templates/appname/ directory, create registration.html and login.html:
 {% endblock %}
 ```
 
-20. ## **Permissions:**
+20. ## **Permissions and Group:**
 
 permission model has id, name, content_type_id, codename field.
 
-When `django.contrib.auth` is listed in your [`INSTALLED_APPS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-INSTALLED_APPS) setting, it will ensure that four default permissions – add, change, delete, and view – are created for each Django model defined in one of your installed applications.
+When `django.contrib.auth` is listed in your [`INSTALLED_APPS`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-INSTALLED_APPS) setting, **it will ensure that four default permissions – add, change, delete, and view – are created for each Django model** defined in one of your installed applications.
 
 name presents the function of the permission,
 
@@ -1025,19 +1037,21 @@ from .models import Address
 #
 content_type = ContentType.objects.get_for_model(Address)
 permission = Permission.objects.create(name = "查看地址",codename = "view_addresses",content_type = content_type)
-permission1 = Permission.objects.crate(name = '改变地址',codename = 
+permission1 = Permission.objects.create(name = '改变地址',codename = 
 "change_addresses",content_type = content_type)
 ```
 
 You can also use the following statements to add permissions in User model:
 
 ```python
+user = User.objects.get(username=username)
+permission = Permission.objects.get(condition)
 user.user_permissions.set(permission_list) #直接给定一个权限的列表
 user.user_permissions.add(permission,permission,...) #一个个添加权限
 user.user_permission.remover(permission,permission) #一个个删除权限
 user.user_permission.clear() #清除权限
 user.has_perm('<app_name>.<codename>') #判断是否拥有某个权限
-user.get_all_permission() #获得所有权限
+user.get_all_permissions() #获得所有权限
 user.get_group_permission #获得所在组权限
 ```
 
@@ -1089,18 +1103,17 @@ In **templates**, to check if the logged-in user has any permissions in the foo 
 Group can classify the User by permissions:
 
 ```
-Group.objects.create(group_name) # 创建分组
-group.permission.add #添加权限
-group.permission.remove #移除权限
-group.permisiion.clear #清除权限
+group = Group.objects.create(group_name) # 创建分组
+group.permission.add(permission) #添加权限
+group.permission.remove(permission) #移除权限
+group.permisiion.clear() #清除权限
 user.get_group_permission() #获取用户所属组的权限
+user.groups.remove(group,group,...)
+user.groups.add(group,group,...)
+user.groups.clear()
 ```
 
-21. ## Group:
-
-see 19. **User Model for authentication**
-
-22. ## Manager:
+21. ## Manager:
 
 A Manager is the **interface through which database query operations are provided to Django models.**
 
@@ -1129,7 +1142,7 @@ Book.dahl_objects.filter(title='Matilda')
 Book.dahl_objects.count()
 ```
 
-23. ## Templates
+22. ## Templates
 
 Loading templates in this order:
 
@@ -1238,12 +1251,196 @@ if, elif and else:
 </html>
 ```
 
+23. ## Form
 
+In ./forms.py:
 
+```python
+from django import forms
 
+class NameForm(forms.Form):
+    your_name = forms.CharField(label='Your name', max_length=100)
+```
 
+The whole form, when rendered for the first time, will look like:
 
+```html
+<label for="your_name">Your name: </label>
+<input id="your_name" type="text" name="your_name" maxlength="100" required>
+```
 
+In ./views.py:
 
+```python
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
 
+from .forms import NameForm
+
+def get_name(request):
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = NameForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            return HttpResponseRedirect('/thanks/')
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = NameForm()
+
+    return render(request, 'name.html', {'form': form})
+```
+
+In templates: All the form’s fields and their attributes will be unpacked into HTML markup from that `{{ form }}` by Django’s template language.
+
+```python
+<form action="/your-name/" method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="fieldWrapper">
+        {{ field.errors }}
+        {{ field.label_tag }} {{ field }}
+        {% if field.help_text %}
+        <p class="help">{{ field.help_text|safe }}</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <input type="submit" value="Submit">
+</form>
+```
+
+Whatever the data submitted with a form, once it has been successfully validated by calling `is_valid()` (and `is_valid()` has returned `True`), the validated form data will be in the `form.cleaned_data` dictionary. This data will have been nicely converted into Python types for you.
+
+ Each form field has an ID attribute set to `id_<field-name>`
+
+For **ModelForm**:
+
+```python
+class ArticleForm(ModelForm):
+     class Meta:
+         model = Article
+         fields = ['pub_date', 'headline', 'content', 'reporter']
+```
+
+For **Validators** in form:
+
+```python
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
+
+def validate_even(value):
+    if value % 2 != 0:
+        raise ValidationError(
+            _('%(value)s is not an even number'),
+            params={'value': value},
+        )
+```
+
+**Add a validator** to a model field:
+
+```python
+from django.db import models
+
+class MyModel(models.Model):
+    even_field = models.IntegerField(validators=[validate_even])
+```
+
+24. ## SendMail
+
+    For example:
+
+```python
+def send_email(request):
+    subject = request.POST['subject']
+    message = request.POST['message']
+    html_message = """\
+<html>
+  <head></head>
+  <body>
+    <p>Salut!</p>
+    <p>Cela ressemble à un excellent
+        <a href="http://www.yummly.com/recipe/Roasted-Asparagus-Epicurious-203718">
+            recipie
+        </a> déjeuner.
+    </p>
+  </body>
+</html>
+"""
+    #from_email = request.POST.get('from_email', '')
+    #if not provided, use DEFAULT_FROM_EMAIL = 'guorenliang2009@live.cn'
+    if subject and message:
+        try:
+            send_mail(subject, message, from_email=None, recipient_list=['leo_of_love@qq.com'], fail_silently=False, html_message=html_message)
+        except BadHeaderError:
+            return HttpResponse('Invalid header found.')
+        return HttpResponse('Send mail successfully.')
+    else:
+        # In reality we'd use a form class
+        # to get proper validation errors.
+        return HttpResponse('Make sure all fields are entered and valid.')
+```
+
+In settings.py:
+
+```python
+EMAIL_HOST = 'smtp.XXX.com'
+
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = ...
+
+EMAIL_HOST_PASSWORD = ...
+
+DEFAULT_FROM_EMAIL = 'from@com'
+```
+
+25. ## Request and Response:
+
+```python
+response = HttpResponse()
+response.write("<p>Here's the text of the Web page.</p>")
+response.write("<p>Here's another paragraph.</p>")
+```
+
+**Setting header fields:**
+
+To set or remove a header field in your response, treat it like a dictionary:
+
+```python
+response = HttpResponse()
+response['Age'] = 120
+del response['Age']
+```
+
+**Telling the browser to treat the response as a file attachment:**
+
+```python
+response = HttpResponse(my_data, content_type='application/vnd.ms-excel')
+response['Content-Disposition'] = 'attachment; filename="foo.xls"'
+```
+
+**FileResponse objects:**
+
+```python
+from django.http import FileResponse
+response = FileResponse(open('myfile.png', 'rb'))
+```
+
+FileResponse.set_headers(open_file)
+
+This method is automatically called during the response initialization and set various headers (`Content-Length`, `Content-Type`, and `Content-Disposition`) depending on `open_file`.
+
+**JsonResponse objects:**
+
+```python
+from django.http import JsonResponse
+response = JsonResponse({'foo': 'bar'})
+>>> response.content
+b'{"foo": "bar"}'
+```
 

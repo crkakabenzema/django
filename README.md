@@ -1,6 +1,10 @@
-1. ## Create a project:
+# Django 
 
-`$ django-admin startporject projectName`
+## 1. Create a project:
+
+```bash
+$ django-admin startporject projectName`
+```
 
 A project includes these files: 
 
@@ -16,13 +20,17 @@ A project includes these files:
 
 `mysite/wsgi.py`: An entry-point for WSGI-compatible web servers to serve your project
 
-2. ## Run the server:
+## 2. Run the server:
 
-`$ python manage.py runserver`
+```bash
+$ python manage.py runserver`
+```
 
-3. ## Start an app:
+## 3. Start an app:
 
-`$ python manage.py startapp appName`
+```bash
+$ python manage.py startapp appName`
+```
 
 An app is laid out like this:
 
@@ -38,7 +46,7 @@ appName/
     views.p
 ```
 
-4. ## **Write view**:
+## 4. **Write view**:
 
 In appName/views.py:
 
@@ -102,7 +110,7 @@ Installed_Apps list:
 - [`django.contrib.messages`](https://docs.djangoproject.com/en/3.1/ref/contrib/messages/#module-django.contrib.messages) – A messaging framework.
 - [`django.contrib.staticfiles`](https://docs.djangoproject.com/en/3.1/ref/contrib/staticfiles/#module-django.contrib.staticfiles) – A framework for managing static files.
 
-5. ## Database setup:
+## 5. Database setup:
 
 migrate command looks at the setting and create any necessary database tables:
 
@@ -110,7 +118,7 @@ migrate command looks at the setting and create any necessary database tables:
 
 for database setting other than SQLite see the https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-DATABASES
 
-6. ## Database layout model creation / Create models (database layout):
+## 6. Database layout model creation / Create models (database layout):
 
 In appName/models.py:
 
@@ -171,7 +179,7 @@ Database migrations
 
 `$ python manage.py migrate`
 
-7. ## **Database API (Insert, Update, Delete)**
+## 7. **Database API (Insert, Update, Delete)**
 
 `$ python manage.py shell`
 
@@ -211,17 +219,17 @@ q = TableName.objects.get(condition)
 q.delete()
 ```
 
-8. ## Create an admin user
+## 8. Create an admin user
 
 `$ python manage.py createsuperuser`
 
-9. ## Create template
+## 9. Create template
 
 create directory like this: appName/templates/appName
 
 In appName/templates/appName: create templates html files 
 
-10. ## Write a form:
+## 10. Write a form:
 
 **request.POST is a dictionary-like object**
 
@@ -276,7 +284,7 @@ def vote(request, question_id):
         return HttpResponseRedirect(reverse('polls:results', args=(question.id,)))
 ```
 
-11. ## File open:
+## 11. File open:
 
 In views.py:
 
@@ -285,7 +293,7 @@ from django.http import FileResponse
 response = FileResponse(open('appName/fileName', 'rb'))
 ```
 
-12. ## Static file:
+## 12. Static file:
 
 Configure static files:
 
@@ -342,7 +350,7 @@ $ python manage.py collectstatic
 
 This will copy all files from your static folders into the [`STATIC_ROOT`](https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-STATIC_ROOT) directory.
 
-13. ## Customize admin site:
+## 13. Customize admin site:
 
 In appName/admin.py
 
@@ -376,7 +384,7 @@ admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice)
 ```
 
-14. ## Customize the admin look and feel:
+## 14. Customize the admin look and feel:
 
 Create a `templates` directory in your project directory (the one that contains `manage.py`).
 
@@ -409,7 +417,7 @@ Where are the Django source files?
 $ python -c "import django; print(django.__path__)"
 ```
 
-15. ## Output PDFs with Django:
+## 15. Output PDFs with Django:
 
 ```
 $ python -m pip install reportlab
@@ -443,7 +451,7 @@ def some_view(request):
     return FileResponse(buffer, as_attachment=True, filename='hello.pdf')
 ```
 
-16. ## Write reusable Apps:
+## 16. Write reusable Apps:
 
 pip install setuptools
 
@@ -542,7 +550,7 @@ recursive-include docs *
 
  Build your package with `python setup.py sdist` (run from inside `django-polls`). 
 
-17. ## Session:
+## 17. Session:
 
 Activate SessionMiddleware:
 
@@ -602,7 +610,7 @@ def logout(request):
 
 Use command "django-admin clearsessions" to clean out expired sessions in database.
 
-18. ## Authentication Views
+## 18. Authentication Views
 
 The easiest way is to include the provided URLconf in `django.contrib.auth.urls` in your own URLconf, for example:
 
@@ -663,7 +671,7 @@ If you want to change Login_URL, login_redirect_url, logout_redirect_url, in set
 LOGIN_REDIRECT_URL = '/appname/'
 ```
 
-19. ## **User Model for authentication**：
+## 19. **User Model for authentication**：
 
 User, Permission and Group are the authentication model.
 
@@ -1001,7 +1009,7 @@ In /templates/appname/ directory, create registration.html and login.html:
 {% endblock %}
 ```
 
-20. ## **Permissions and Group:**
+## 20. **Permissions and Group:**
 
 permission model has id, name, content_type_id, codename field.
 
@@ -1113,7 +1121,7 @@ user.groups.add(group,group,...)
 user.groups.clear()
 ```
 
-21. ## Manager:
+## 21. Manager:
 
 A Manager is the **interface through which database query operations are provided to Django models.**
 
@@ -1142,7 +1150,7 @@ Book.dahl_objects.filter(title='Matilda')
 Book.dahl_objects.count()
 ```
 
-22. ## Templates
+## 22. Templates
 
 Loading templates in this order:
 
@@ -1251,7 +1259,7 @@ if, elif and else:
 </html>
 ```
 
-23. ## Form
+## 23. Form
 
 In ./forms.py:
 
@@ -1350,9 +1358,9 @@ class MyModel(models.Model):
     even_field = models.IntegerField(validators=[validate_even])
 ```
 
-24. ## SendMail
+## 24. SendMail
 
-    For example:
+For example:
 
 ```python
 def send_email(request):
@@ -1399,7 +1407,7 @@ EMAIL_HOST_PASSWORD = ...
 DEFAULT_FROM_EMAIL = 'from@com'
 ```
 
-25. ## Request and Response:
+## 25. Request and Response:
 
 ```python
 response = HttpResponse()
@@ -1444,3 +1452,10 @@ response = JsonResponse({'foo': 'bar'})
 b'{"foo": "bar"}'
 ```
 
+In order to serialize objects other than `dict` you must set the `safe` parameter to `False`:
+
+```
+>>> response = JsonResponse([1, 2, 3], safe=False)
+```
+
+Without passing `safe=False`, a [`TypeError`](https://docs.python.org/3/library/exceptions.html#TypeError) will be raised.
